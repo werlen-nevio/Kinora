@@ -14,7 +14,7 @@ export function Footer() {
           <a href="https://www.themoviedb.org" target="_blank" rel="noreferrer" className="inline-block">
             <Image src="/tmdb-logo.svg" alt="The Movie Database (TMDB)" width={64} height={46} unoptimized />
           </a>
-          <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+          <p>This application uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.</p>
           <p>
             Verfügbarkeit bei Streaming-, Kauf- und Leihanbietern: Daten von{" "}
             <a href="https://www.justwatch.com" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-screen">

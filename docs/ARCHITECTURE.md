@@ -55,6 +55,21 @@ Seiten sind Server Components. Sie lesen TMDB über `src/server/tmdb/api.ts` und
 
 Zwei Stufen mit Single-Flight: In-Memory-LRU, darunter die Tabelle `tmdb_cache`. Jeder Endpunkt hat eine eigene TTL und ein Stale-Fenster. Abgelaufene Einträge werden sofort ausgeliefert und im Hintergrund erneuert; fällt TMDB aus, bleiben sie bis zum Ende des Fensters nutzbar. Der Client begrenzt Rate und Parallelität, wiederholt 429 und 5xx mit Backoff und respektiert `Retry-After`.
 
+### Speicherdauer von TMDB-Daten
+
+TMDB erlaubt, Daten höchstens 6 Monate zu speichern. Der tägliche Job `refresh_tmdb_data` hält deshalb alles unter 120 Tagen, mit Reserve für Cache und Ausfälle:
+
+| Daten | Was passiert |
+| --- | --- |
+| Alte Swipe-Sessions samt Karten | Werden gelöscht. Die Swipe-Entscheidungen bleiben, sie enthalten keine TMDB-Daten |
+| Empfehlungen inaktiver Konten | Werden gelöscht und beim nächsten Besuch neu berechnet |
+| Titel in `media`, an denen nichts hängt | Werden gelöscht |
+| Titel mit persönlichen Daten | Werden neu von TMDB geholt, pro Lauf höchstens 200. Besetzung und Personen kommen mit |
+| Personen ohne Titel | Werden gelöscht |
+| Titel, die TMDB nicht mehr kennt | Der Name bleibt, damit Tagebuch und Bibliothek lesbar sind, alles andere wird entfernt |
+
+Bewusst bleiben TMDB-IDs als Schlüssel und die Episodenlaufzeit in `episode_progress`, die zur persönlichen Sehzeit gehört. Der Job läuft im Worker, `DISABLE_WORKER=true` darf also nicht auf allen Instanzen gesetzt sein.
+
 ### Empfehlungen
 
 ```

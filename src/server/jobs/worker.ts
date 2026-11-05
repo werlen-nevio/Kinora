@@ -1,15 +1,36 @@
 import "server-only";
+import { type Media, Prisma } from "@/generated/prisma/client";
+import { DEFAULT_LANGUAGE, DEFAULT_REGION } from "@/lib/locale";
 import { prisma } from "../db";
-import { storeSnapshot } from "../library/media";
+import { storeSnapshot, toKind } from "../library/media";
 import { deriveSeriesStatus } from "@/lib/series-progress";
 import { recomputeRecommendations } from "../recommender/service";
-import { getTv } from "../tmdb/api";
+import { getDetail, getTv } from "../tmdb/api";
+import { TmdbError } from "../tmdb/client";
 import { claimJob, completeJob, enqueueJob, failJob, releaseStuckJobs } from "./queue";
 
 const POLL_INTERVAL_MS = 1_500;
 const IDLE_MAINTENANCE_MS = 5 * 60 * 1000;
 const DAY_MS = 24 * 3600 * 1000;
 const SERIES_REFRESH_BATCH = 200;
+const MEDIA_REFRESH_BATCH = 200;
+
+// TMDB erlaubt, Daten höchstens 6 Monate zu speichern. Die Grenze liegt bewusst darunter:
+// Ein Abruf kann bis zu 15 Tage aus dem Cache kommen, und ein Ausfall verzögert den Job.
+const TMDB_DATA_MAX_AGE_MS = 120 * DAY_MS;
+
+/** Ein Titel, an dem nichts Persönliches hängt und den `ensureMedia` jederzeit neu anlegen kann. */
+const UNREFERENCED = {
+  userMedia: { none: {} },
+  ratings: { none: {} },
+  diaryEntries: { none: {} },
+  episodeProgress: { none: {} },
+  watchlist: { none: {} },
+  favorites: { none: {} },
+  interactions: { none: {} },
+  swipes: { none: {} },
+  discoveryItems: { none: {} },
+} satisfies Prisma.MediaWhereInput;
 
 type Handler = (payload: Record<string, unknown>) => Promise<void>;
 
@@ -33,6 +54,28 @@ const handlers: Record<string, Handler> = {
       const updated = await storeSnapshot(detail);
       await reconcileSeriesStatus(updated.id, updated.airedEpisodes ?? 0);
     }
+  },
+
+  // Hält alles Gespeicherte von TMDB innerhalb der erlaubten Frist. Die Reihenfolge zählt:
+  // Erst fallen Sessions weg, damit danach auch Titel frei werden, die nur an ihnen hingen.
+  async refresh_tmdb_data() {
+    const cutoff = new Date(Date.now() - TMDB_DATA_MAX_AGE_MS);
+
+    // Karten-Snapshots lassen sich neu erzeugen und müssen deshalb nicht aufgefrischt werden.
+    await prisma.discoverySession.deleteMany({ where: { createdAt: { lt: cutoff } } });
+    await prisma.recommendationCache.deleteMany({ where: { computedAt: { lt: cutoff } } });
+    await prisma.recommendationState.updateMany({
+      where: { computedAt: { lt: cutoff }, sections: { not: Prisma.DbNull } },
+      data: { sections: Prisma.DbNull },
+    });
+
+    // Eine schlanke Zeile aus dem Swipe trägt `fetchedAt` 0; ihr echtes Alter steht in `createdAt`.
+    const stale = { fetchedAt: { lt: cutoff }, createdAt: { lt: cutoff } };
+    await prisma.media.deleteMany({ where: { ...stale, ...UNREFERENCED } });
+    await prisma.person.deleteMany({ where: { credits: { none: {} } } });
+
+    const due = await prisma.media.findMany({ where: stale, orderBy: { fetchedAt: "asc" }, take: MEDIA_REFRESH_BATCH });
+    for (const media of due) await refreshSnapshot(media);
   },
 
   async cleanup() {
@@ -61,6 +104,32 @@ async function reconcileSeriesStatus(mediaId: string, aired: number) {
   }
 }
 
+/** Holt einen Titel neu. Ein Ausfall bricht den Job ab, damit er später von vorne versucht wird. */
+async function refreshSnapshot(media: Media) {
+  try {
+    const detail = await getDetail({ kind: toKind(media.type), tmdbId: media.tmdbId }, DEFAULT_LANGUAGE, DEFAULT_REGION);
+    const updated = await storeSnapshot(detail);
+    if (updated.type === "TV") await reconcileSeriesStatus(updated.id, updated.airedEpisodes ?? 0);
+  } catch (error) {
+    if (!(error instanceof TmdbError && error.code === "not_found")) throw error;
+    // TMDB kennt den Titel nicht mehr. Der Name bleibt, weil Tagebuch und Bibliothek ohne ihn
+    // unlesbar würden; alles andere verschwindet. Der nächste Versuch folgt nach Ablauf der Frist.
+    await prisma.media.update({
+      where: { id: media.id },
+      data: {
+        originalTitle: null,
+        posterPath: null,
+        backdropPath: null,
+        voteAverage: null,
+        voteCount: null,
+        popularity: null,
+        fetchedAt: new Date(),
+        credits: { deleteMany: {} },
+      },
+    });
+  }
+}
+
 export async function runNextJob(): Promise<boolean> {
   const job = await claimJob();
   if (!job) return false;
@@ -80,6 +149,7 @@ async function scheduleMaintenance() {
   await releaseStuckJobs();
   const nextRun = new Date(Date.now() + DAY_MS);
   await enqueueJob("refresh_series", {}, { dedupeKey: "daily:refresh_series", runAt: nextRun });
+  await enqueueJob("refresh_tmdb_data", {}, { dedupeKey: "daily:refresh_tmdb_data", runAt: nextRun });
   await enqueueJob("cleanup", {}, { dedupeKey: "daily:cleanup", runAt: nextRun });
 }
 

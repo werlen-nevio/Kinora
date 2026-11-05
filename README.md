@@ -1,19 +1,46 @@
 # Kinora
 
+![Kinora im Browser und auf dem Smartphone](docs/screenshots/kinora-hero.jpg)
+
+<sub>Mit Demo-Daten: Alle gezeigten Filme, Personen und Plakate sind erfunden.</sub>
+
 Eine private, selbst gehostete Film- und Serienbibliothek: Watchlist, Filmtagebuch, Bewertungen in halben Punkten, Episodentracking, Statistiken, ein Swipe-Modus zum Entdecken und erklärbare Empfehlungen. Die Filmdaten kommen von [TMDB](https://www.themoviedb.org). Kinora spielt keine Filme ab und bietet keine Inhalte zum Streamen an.
 
 <a href="https://www.themoviedb.org"><img src="public/tmdb-logo.svg" alt="TMDB" width="64"></a>
 
-This product uses the TMDB API but is not endorsed or certified by TMDB.
+This application uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.
 
 ## Inhalt
 
+- [Einblicke](#einblicke)
 - [Schnellstart mit Docker](#schnellstart-mit-docker)
 - [Entwicklung](#entwicklung)
 - [Betrieb mit HTTPS](#betrieb-mit-https)
 - [Konfiguration](#konfiguration)
 - [Tests](#tests)
 - [Aufbau](#aufbau)
+- [Rechtliches](#rechtliches)
+
+## Einblicke
+
+Die Bilder zeigen die echte Anwendung mit Demo-Daten. Alle Filme, Serien, Personen, Anbieter und Plakate darin sind erfunden.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/startseite.jpg" alt="Startseite mit einer persönlichen Empfehlung und ihrer Begründung"><br><sub>Empfehlungen, die ihren Grund nennen</sub></td>
+    <td width="50%"><img src="docs/screenshots/swipe.jpg" alt="Swipe-Modus: Eine Filmkarte wird zur Watchlist gezogen"><br><sub>Swipe-Modus zum Entdecken</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/film.jpg" alt="Filmseite mit Bewertung, Sehstatus und Streaming-Anbieter"><br><sub>Filmseite mit Bewertung und Streaming-Angeboten</sub></td>
+    <td><img src="docs/screenshots/serie.jpg" alt="Serienseite mit Fortschritt und Bewertung"><br><sub>Serien mit Episodentracking</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/tagebuch.jpg" alt="Filmtagebuch mit Datum, Bewertung und Notizen"><br><sub>Filmtagebuch mit Notizen</sub></td>
+    <td><img src="docs/screenshots/statistiken.jpg" alt="Statistiken mit Kennzahlen und Sehkalender"><br><sub>Statistiken und Sehkalender</sub></td>
+  </tr>
+</table>
+
+![Kinora auf dem Smartphone: Startseite, Swipe-Modus, Filmseite und Tagebuch](docs/screenshots/mobil.jpg)
 
 ## Schnellstart mit Docker
 
@@ -139,9 +166,14 @@ Die Architektur, der Datenfluss und die wichtigsten Entscheide stehen in [docs/A
 | `prisma` | Datenmodell und Migrationen |
 | `tests` | Unit-, Integrations- und End-to-End-Tests |
 | `docs/brand` | Logo, Icons und Nutzungsregeln |
+| `docs/screenshots` | Produktbilder mit Demo-Daten |
 
 ## Rechtliches
 
-Kinora nutzt die TMDB-API gemäss den [Nutzungsbedingungen](https://www.themoviedb.org/api-terms-of-use). Die Angaben zu Streaming-, Kauf- und Leihanbietern stammen von JustWatch und werden über TMDB bezogen.
+Die Lizenz dieses Repositorys gilt nur für den Code. Filmdaten und Bilder gehören nicht dazu: Kinora lädt sie zur Laufzeit von TMDB, und dafür gelten die [Nutzungsbedingungen von TMDB](https://www.themoviedb.org/api-terms-of-use).
 
-`public/tmdb-logo.svg` stammt von Wikimedia Commons, weil die Logo-Seite von TMDB beim Erstellen automatisierte Abrufe ablehnte. Gleiche die Datei vor einer Veröffentlichung mit dem offiziellen Download unter [Logos & Attribution](https://www.themoviedb.org/about/logos-attribution) ab.
+- **Eigenes Token:** Jede Installation braucht ein eigenes TMDB-Token. Wer eines anlegt, ist selbst an diese Bedingungen gebunden.
+- **Kommerzielle Nutzung:** Sie ist ohne eigene Vereinbarung mit TMDB nicht erlaubt, das gilt etwa für Gebühren oder Werbung. Daran ändert auch die Lizenz des Codes nichts.
+- **Speicherdauer:** TMDB erlaubt, Daten höchstens 6 Monate zu speichern. Ein täglicher Job frischt gespeicherte Titel deshalb ab 120 Tagen auf und löscht, was nicht mehr gebraucht wird, siehe [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#speicherdauer-von-tmdb-daten).
+
+Die Angaben zu Streaming-, Kauf- und Leihanbietern stammen von JustWatch und werden über TMDB bezogen.

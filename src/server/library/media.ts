@@ -103,11 +103,22 @@ export async function storeSnapshot(detail: MediaDetail): Promise<Media> {
       data: uniquePeople.map((person) => ({ tmdbId: person.tmdbId, name: person.name, profilePath: person.profilePath })),
       skipDuplicates: true,
     });
+    // Feste Reihenfolge, damit sich parallele Snapshots beim Nachführen nicht blockieren.
     const people = await tx.person.findMany({
       where: { tmdbId: { in: uniquePeople.map((person) => person.tmdbId) } },
-      select: { id: true, tmdbId: true },
+      select: { id: true, tmdbId: true, name: true, profilePath: true },
+      orderBy: { tmdbId: "asc" },
     });
     const idByTmdb = new Map(people.map((person) => [person.tmdbId, person.id]));
+
+    // Name und Bild stammen von TMDB und dürfen nicht veralten, auch nicht bei bekannten Personen.
+    const latestByTmdb = new Map(uniquePeople.map((person) => [person.tmdbId, person]));
+    for (const person of people) {
+      const latest = latestByTmdb.get(person.tmdbId);
+      if (latest && (latest.name !== person.name || latest.profilePath !== person.profilePath)) {
+        await tx.person.update({ where: { id: person.id }, data: { name: latest.name, profilePath: latest.profilePath } });
+      }
+    }
 
     await tx.mediaPerson.deleteMany({ where: { mediaId: media.id } });
     await tx.mediaPerson.createMany({

@@ -5,12 +5,13 @@ import { prisma } from "./db";
 
 const memory = new Map<string, AmbientColors | null>();
 const MEMORY_LIMIT = 2_000;
-const CACHE_DAYS = 180;
+// Unter den 6 Monaten, die TMDB für gespeicherte Daten erlaubt.
+const CACHE_DAYS = 150;
 const SAFE_PATH = /^\/[A-Za-z0-9_-]+\.(jpg|jpeg|png|webp)$/;
 
 /**
  * Die Farbe, die ein Film in den Raum wirft. Wird einmal pro Bild berechnet und
- * dauerhaft gespeichert. Scheitert etwas, bleibt das neutrale Saallicht.
+ * gespeichert. Scheitert etwas, bleibt das neutrale Saallicht.
  */
 export async function getAmbient(path: string | null | undefined): Promise<AmbientColors | null> {
   if (!path || !SAFE_PATH.test(path)) return null;

@@ -28,7 +28,7 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
           <Logo />
         </Link>
         <main className="w-full max-w-sm">{children}</main>
-        <p className="text-xs text-fog-dim">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+        <p className="text-xs text-fog-dim">This application uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.</p>
       </div>
       <div aria-hidden="true" className="relative hidden overflow-hidden lg:block">
         <div className="absolute -inset-x-8 -inset-y-16 grid rotate-[-4deg] grid-cols-5 gap-3 opacity-70">
