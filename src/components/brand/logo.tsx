@@ -1,26 +1,24 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Das Zeichen zitiert die Kinora, das Daumenkino der Brüder Lumière: Vom Scharnier
- * fächern zwei Bildkarten auf und bilden mit dem Schaft ein K. Die Karte dazwischen
- * ist der Lichtstrahl und trägt die Farbe des aktuellen Films.
+ * Ein K, aus der runden Blende eines Projektors geschnitten. Der Lichtkegel zwischen den
+ * Armen trägt die Farbe des aktuellen Films. Regeln und alle Varianten: docs/brand/README.md.
  */
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 32 32" aria-hidden="true" className={cn("size-7", className)}>
-      <rect x="4.5" y="4" width="5.5" height="24" rx="1.4" fill="currentColor" />
-      <path d="M12.6 14.6 21.7 4h6.1L18.3 15.1a1.6 1.6 0 0 1-1.2.5h-3.8a.8.8 0 0 1-.7-1Z" fill="currentColor" />
-      <path d="M12.6 17.4 21.7 28h6.1l-9.5-11.1a1.6 1.6 0 0 0-1.2-.5h-3.8a.8.8 0 0 0-.7 1Z" fill="currentColor" />
-      <path d="M20.2 14.9 29 12.6v6.8l-8.8-2.3a1.1 1.1 0 0 1 0-2.2Z" fill="var(--ambient, #f2be7e)" />
+    <svg viewBox="16 16 224 224" aria-hidden="true" className={cn("size-[1.4em] shrink-0", className)}>
+      <path d="M84.5 24.79 L84.5 92.03 L128.39 16 A112 112 0 0 1 203.03 44.85 L84.5 113.28 L84.5 142.72 L203.03 211.15 A112 112 0 0 1 128.39 240 L84.5 163.97 L84.5 231.21 A112 112 0 0 1 84.5 24.79 Z" fill="currentColor" />
+      <path d="M104 128 L234.41 93.06 A112 112 0 0 1 234.41 162.94 Z" fill="var(--ambient, #f2be7e)" />
     </svg>
   );
 }
 
-export function Logo({ className, markClassName }: { className?: string; markClassName?: string }) {
+/** Masse in em, damit Zeichen, Abstand und Schrift bei jeder Grösse im festen Verhältnis bleiben. */
+export function Logo({ className }: { className?: string }) {
   return (
-    <span className={cn("inline-flex items-center gap-2 text-screen", className)}>
-      <LogoMark className={markClassName} />
-      <span className="font-display text-[1.45rem] font-semibold leading-none tracking-tight">Kinora</span>
+    <span className={cn("inline-flex items-center gap-[0.4em] text-[1.45rem] text-screen", className)}>
+      <LogoMark />
+      <span className="font-display leading-none">Kinora</span>
     </span>
   );
 }

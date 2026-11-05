@@ -7,7 +7,7 @@ export function Footer() {
     <footer className="gutter mt-24 border-t border-white/8 pb-24 pt-10 text-sm text-fog lg:pb-12">
       <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
         <div className="max-w-md space-y-3">
-          <Logo markClassName="size-6" />
+          <Logo className="text-[1.2rem]" />
           <p>Deine private Film- und Serienbibliothek. Kinora spielt keine Filme ab und bietet keine Inhalte zum Streamen an.</p>
         </div>
         <div className="max-w-md space-y-3">

@@ -92,7 +92,7 @@ export function RankedRow({ title, items }: { title: string; items: MediaCard[] 
       <Carousel label={title} gap="gap-1">
         {items.slice(0, 10).map((card, index) => (
           <div key={refKey(card)} className="relative flex items-start pl-11 sm:pl-14">
-            <span aria-hidden="true" className="font-display absolute bottom-[3.2rem] left-0 z-0 select-none text-[6.5rem] font-semibold italic leading-none text-white/14 sm:text-[8.5rem]">
+            <span aria-hidden="true" className="font-display absolute bottom-[3.2rem] left-0 z-0 select-none text-[6.5rem] leading-none text-white/14 sm:text-[8.5rem]">
               {index + 1}
             </span>
             <PosterCard card={card} className="relative z-10" />

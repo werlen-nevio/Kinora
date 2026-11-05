@@ -138,6 +138,7 @@ Die Architektur, der Datenfluss und die wichtigsten Entscheide stehen in [docs/A
 | `src/lib` | Gemeinsamer Code für Server und Client |
 | `prisma` | Datenmodell und Migrationen |
 | `tests` | Unit-, Integrations- und End-to-End-Tests |
+| `docs/brand` | Logo, Icons und Nutzungsregeln |
 
 ## Rechtliches
 

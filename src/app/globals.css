@@ -1,7 +1,5 @@
 @import "tailwindcss";
 @import "@fontsource-variable/mona-sans/wdth.css";
-@import "@fontsource-variable/bodoni-moda/opsz.css";
-@import "@fontsource-variable/bodoni-moda/opsz-italic.css";
 
 /*
   Kinora: Designsystem.
@@ -39,7 +37,7 @@
   --color-ambient-glow: var(--ambient-glow);
 
   --font-sans: "Mona Sans Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Bodoni Moda Variable", "Times New Roman", serif;
+  --font-display: "Mona Sans Variable", ui-sans-serif, system-ui, sans-serif;
 
   --text-title-xl: clamp(2.75rem, 1.6rem + 5vw, 6rem);
   --text-title-lg: clamp(2.25rem, 1.5rem + 3vw, 4rem);
@@ -74,12 +72,12 @@ body {
   overflow-x: clip;
 }
 
-/* Bodoni bei niedriger optischer Grösse: kräftigere Haarlinien, auch über Bildern lesbar. */
+/* Titel: dieselbe Schrift wie der Fliesstext, aber breiter, kräftiger und enger gesetzt. */
 .font-display {
   font-family: var(--font-display);
-  font-optical-sizing: none;
-  font-variation-settings: "opsz" 18;
-  letter-spacing: -0.01em;
+  font-stretch: 112%;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .gutter {

@@ -102,7 +102,7 @@ export default async function StatsPage() {
       <div className="ambient-light absolute inset-x-0 top-0 -z-10 h-[50vh] opacity-60" />
       <header className="max-w-3xl">
         <h1 className="font-display text-title-lg font-medium leading-[1.05]">Deine Statistiken</h1>
-        {stats.tasteSummary ? <p className="font-display mt-4 text-title-sm italic text-screen/90 text-balance">{stats.tasteSummary}</p> : null}
+        {stats.tasteSummary ? <p className="mt-4 text-title-sm text-screen/90 text-balance">{stats.tasteSummary}</p> : null}
       </header>
 
       <dl className="mt-10 grid grid-cols-2 gap-x-6 gap-y-7 md:grid-cols-4 2xl:grid-cols-7">

@@ -48,7 +48,7 @@ export function DetailHero({ title, originalTitle, tagline, logoPath, backdropPa
             <h1 className="font-display text-title-lg font-medium leading-[1.05] text-balance">{title}</h1>
           )}
           {showOriginal ? <p className="text-sm text-fog">Originaltitel: {originalTitle}</p> : null}
-          {tagline ? <p className="font-display text-lg italic text-screen/85">{tagline}</p> : null}
+          {tagline ? <p className="text-lg text-screen/85">{tagline}</p> : null}
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-screen/90">
             {rating ? (
