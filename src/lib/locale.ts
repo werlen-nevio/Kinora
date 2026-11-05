@@ -17,3 +17,10 @@ export const SUPPORTED_REGIONS = [
   { code: "US", label: "USA" },
   { code: "GB", label: "Grossbritannien" },
 ] as const;
+
+const REGION_NAMES: Record<string, string> = { CH: "die Schweiz", DE: "Deutschland", AT: "Österreich", FR: "Frankreich", IT: "Italien", US: "die USA", GB: "Grossbritannien" };
+
+/** Für Sätze mit «für», also «für die Schweiz». */
+export function regionName(region: string): string {
+  return REGION_NAMES[region] ?? region;
+}

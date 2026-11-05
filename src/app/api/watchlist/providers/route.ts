@@ -3,15 +3,16 @@ import { RATE_LIMITS } from "@/server/http/rate-limit";
 import { getWatchlist } from "@/server/library/service";
 import { getWatchProviders } from "@/server/tmdb/api";
 import { getUserContext } from "@/server/user";
-import { refKey, type WatchProvider } from "@/lib/tmdb-types";
+import { refKey, streamingProviders, type WatchProvider } from "@/lib/tmdb-types";
 
 const CONCURRENCY = 6;
 
-/** Wird erst geladen, wenn jemand den Anbieterfilter öffnet: je Titel eine (gecachte) Anfrage. */
+/** Läuft im Hintergrund, sobald die Watchlist offen ist: je Titel eine (gecachte) Anfrage. */
 export const GET = withUser(async ({ user }) => {
   const [rows, { region }] = await Promise.all([getWatchlist(user.id), getUserContext(user.id)]);
   const providers = new Map<number, WatchProvider>();
   const byItem: Record<string, number[]> = {};
+  const streaming: Record<string, number[]> = {};
 
   let cursor = 0;
   await Promise.all(
@@ -24,6 +25,7 @@ export const GET = withUser(async ({ user }) => {
         if (!regional) continue;
         const available = [...regional.flatrate, ...regional.free, ...regional.ads, ...regional.rent, ...regional.buy];
         byItem[refKey(row)] = [...new Set(available.map((provider) => provider.id))];
+        streaming[refKey(row)] = streamingProviders(regional).map((provider) => provider.id);
         available.forEach((provider) => providers.set(provider.id, provider));
       }
     }),
@@ -33,5 +35,6 @@ export const GET = withUser(async ({ user }) => {
     region,
     providers: [...providers.values()].sort((a, b) => a.priority - b.priority),
     byItem,
+    streaming,
   };
 }, { rateLimit: RATE_LIMITS.watchlistExtras });

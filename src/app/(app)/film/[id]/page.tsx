@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { FranchiseSection } from "@/components/detail/franchise";
 import { DetailHero } from "@/components/detail/hero";
 import { RelatedMovieRows } from "@/components/detail/related-rows";
-import { CastRow, CrewSection, ExpandableText, FactList, MediaGallery, ProvidersSection, SectionHeading } from "@/components/detail/sections";
+import { CastRow, CrewSection, ExpandableText, FactList, MediaGallery, ProvidersSection, ProvidersSummary, SectionHeading } from "@/components/detail/sections";
 import { TrackView } from "@/components/detail/track-view";
 import { MediaDiaryPanel } from "@/components/diary/media-diary-panel";
 import { FavoriteButton, MoreMenu, PersonalStatus, RatingControl, SeenButton, ShareButton, TrailerButton, WatchlistButton } from "@/components/media/actions";
@@ -94,6 +94,7 @@ export default async function MoviePage({ params }: PageProps) {
           <ShareButton title={movie.title} />
           <MoreMenu media={ref} title={movie.title} />
         </div>
+        <ProvidersSummary providers={movie.providersByRegion[region]} region={region} />
         {movie.overview ? <p className="line-clamp-3 max-w-[68ch] pt-1 text-[15px] leading-relaxed text-screen/85 text-pretty">{movie.overview}</p> : null}
         <dl className="flex flex-wrap gap-x-8 gap-y-2 pt-1 text-sm">
           {directors.length ? (

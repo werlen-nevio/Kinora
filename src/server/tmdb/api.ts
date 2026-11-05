@@ -191,7 +191,7 @@ export const getPerson = cache(async (id: number, language: string = DEFAULT_LAN
   return normalizePerson(raw, language);
 });
 
-/** Watch-Provider einzeln, ohne die grosse Detailantwort (Filter der Watchlist). */
+/** Watch-Provider einzeln, ohne die grosse Detailantwort (Logos und Filter der Watchlist). */
 export const getWatchProviders = cache(async (ref: MediaRef): Promise<Record<string, WatchProviders>> => {
   const raw = await tmdb.get<unknown>(`/${ref.kind}/${ref.tmdbId}/watch/providers`, {}, POLICY.providers);
   return normalizeProvidersByRegion(raw);

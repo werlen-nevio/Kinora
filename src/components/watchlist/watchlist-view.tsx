@@ -8,12 +8,14 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { apiFetch, useLibraryState, useReplaceLibraryState } from "@/components/library/library-provider";
 import { PosterCard } from "@/components/media/poster-card";
+import { ProviderLogos } from "@/components/media/provider-logos";
 import { TmdbImage } from "@/components/media/tmdb-image";
 import { Segments } from "@/components/person/filmography";
 import { Button, buttonStyles } from "@/components/ui/button";
 import { Checkbox, Popover, PopoverContent, PopoverTrigger, Select } from "@/components/ui/primitives";
 import { formatRating, formatRuntime } from "@/lib/format";
 import type { LibraryState } from "@/lib/library-types";
+import { regionName } from "@/lib/locale";
 import { type MediaCard, mediaHref, refKey, type WatchProvider } from "@/lib/tmdb-types";
 import { cn } from "@/lib/utils";
 import type { WatchlistRow } from "@/server/library/service";
@@ -37,6 +39,7 @@ interface ProvidersData {
   region: string;
   providers: WatchProvider[];
   byItem: Record<string, number[]>;
+  streaming: Record<string, number[]>;
 }
 
 interface Filters {
@@ -92,12 +95,11 @@ export function WatchlistView({ rows, genres }: { rows: WatchlistRow[]; genres: 
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [bulkPending, setBulkPending] = useState(false);
-  const [providersRequested, setProvidersRequested] = useState(false);
 
   const providers = useQuery<ProvidersData>({
     queryKey: ["watchlist-providers", rows.length],
     queryFn: () => apiFetch<ProvidersData>("/api/watchlist/providers"),
-    enabled: providersRequested,
+    enabled: rows.length > 0,
     staleTime: 3600_000,
   });
 
@@ -227,7 +229,7 @@ export function WatchlistView({ rows, genres }: { rows: WatchlistRow[]; genres: 
           ]}
         />
 
-        <Popover onOpenChange={(open) => open && setProvidersRequested(true)}>
+        <Popover>
           <PopoverTrigger className={buttonStyles({ variant: "secondary" })}>
             <SlidersHorizontal /> Filter{activeCount ? ` (${activeCount})` : ""}
           </PopoverTrigger>
@@ -277,6 +279,10 @@ export function WatchlistView({ rows, genres }: { rows: WatchlistRow[]; genres: 
             return (
               <li key={key} className="relative">
                 <PosterCard card={card} className="w-full sm:w-full 3xl:w-full" sizes="(max-width: 640px) 45vw, 220px" showWhy={sort === "recommended"} />
+                {/* Die Höhe ist reserviert, damit das Raster nicht springt, wenn die Logos nachladen. */}
+                <div className="mt-2 min-h-6 px-0.5">
+                  <Availability data={providers.data} itemKey={key} max={3} />
+                </div>
                 {selecting ? <SelectOverlay checked={selected.has(key)} title={row.title} onToggle={() => toggleSelection(key)} /> : null}
               </li>
             );
@@ -285,10 +291,14 @@ export function WatchlistView({ rows, genres }: { rows: WatchlistRow[]; genres: 
       ) : (
         <ul className="divide-y divide-white/6">
           {visible.map((row) => (
-            <ListRow key={refKey(row)} row={row} library={library} reason={sort === "recommended" ? order.data?.reasons[refKey(row)] : undefined} selecting={selecting} checked={selected.has(refKey(row))} onToggle={() => toggleSelection(refKey(row))} />
+            <ListRow key={refKey(row)} row={row} library={library} providers={providers.data} reason={sort === "recommended" ? order.data?.reasons[refKey(row)] : undefined} selecting={selecting} checked={selected.has(refKey(row))} onToggle={() => toggleSelection(refKey(row))} />
           ))}
         </ul>
       )}
+
+      {providers.data?.providers.length ? (
+        <p className="text-xs text-fog-dim">Die Logos zeigen, wo ein Titel im Abo oder kostenlos läuft. Angaben für {regionName(providers.data.region)}, ohne Gewähr, Daten von JustWatch über TMDB.</p>
+      ) : null}
 
       {selecting ? (
         <div className="fixed inset-x-3 bottom-[4.5rem] z-30 mx-auto flex max-w-4xl flex-wrap items-center gap-2 rounded-2xl bg-ink-overlay p-3 shadow-2xl shadow-black/60 ring-1 ring-white/10 lg:bottom-6">
@@ -326,9 +336,16 @@ function SelectOverlay({ checked, title, onToggle }: { checked: boolean; title: 
   );
 }
 
+function Availability({ data, itemKey, max }: { data: ProvidersData | undefined; itemKey: string; max: number }) {
+  const streaming = data?.streaming[itemKey] ?? [];
+  if (streaming.length) return <ProviderLogos providers={streaming.flatMap((id) => data?.providers.find((provider) => provider.id === id) ?? [])} max={max} />;
+  return data?.byItem[itemKey]?.length ? <span className="text-xs text-fog">Leihen oder kaufen</span> : null;
+}
+
 function ListRow({
   row,
   library,
+  providers,
   reason,
   selecting,
   checked,
@@ -336,6 +353,7 @@ function ListRow({
 }: {
   row: WatchlistRow;
   library: LibraryState;
+  providers: ProvidersData | undefined;
   reason?: string;
   selecting: boolean;
   checked: boolean;
@@ -358,6 +376,9 @@ function ListRow({
             <span>{row.kind === "tv" ? "Serie" : "Film"}</span>
             {runtime ? <span>{runtime}</span> : null}
             {reason ? <span className="text-screen/80">{reason}</span> : null}
+          </span>
+          <span className="mt-1 block empty:hidden">
+            <Availability data={providers} itemKey={refKey(row)} max={4} />
           </span>
         </span>
         {item?.watched ? (

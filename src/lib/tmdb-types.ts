@@ -87,6 +87,17 @@ export interface WatchProviders {
   buy: WatchProvider[];
 }
 
+/** Ein Anbieter kann in mehreren Listen stehen, etwa zum Leihen und zum Kaufen. */
+export function uniqueProviders(...lists: readonly (readonly WatchProvider[])[]): WatchProvider[] {
+  const byId = new Map(lists.flat().map((provider) => [provider.id, provider]));
+  return [...byId.values()].sort((a, b) => a.priority - b.priority);
+}
+
+/** Läuft ohne Einzelkauf: im Abo, kostenlos oder mit Werbung. */
+export function streamingProviders(regional: WatchProviders | undefined): WatchProvider[] {
+  return regional ? uniqueProviders(regional.flatrate, regional.free, regional.ads) : [];
+}
+
 export interface Keyword {
   id: number;
   name: string;

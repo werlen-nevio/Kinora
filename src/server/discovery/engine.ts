@@ -1,7 +1,7 @@
 import "server-only";
 import { type DiscoveryCard, type DiscoveryFilters, type DiscoveryModeName, matchesBasicFilters, matchesDiscoveryFilters } from "@/lib/discovery";
 import type { MediaCard, MediaDetail, MediaKind } from "@/lib/tmdb-types";
-import { refKey } from "@/lib/tmdb-types";
+import { refKey, streamingProviders } from "@/lib/tmdb-types";
 import { getAmbient } from "../ambient";
 import { primaryReason } from "../recommender/explain";
 import { featureKey } from "../recommender/profile";
@@ -12,7 +12,6 @@ import { discover, type DiscoverFilters, getCollection, getDetail, getTopRated }
 import { getUserContext } from "../user";
 import { arrangeFranchises, type FranchiseGroup, isExploration, selectSessionItems, SESSION_SIZE } from "./selection";
 
-const STREAMING_TYPES = ["flatrate", "free", "ads"] as const;
 const AMBIENT_CONCURRENCY = 6;
 const MAX_FRANCHISES = 6;
 
@@ -21,10 +20,7 @@ function kindsOf(filters: DiscoveryFilters): MediaKind[] {
 }
 
 function providerIdsOf(detail: MediaDetail | null, region: string): number[] | null {
-  const regional = detail?.providersByRegion[region];
-  if (!detail) return null;
-  if (!regional) return [];
-  return STREAMING_TYPES.flatMap((type) => regional[type].map((provider) => provider.id));
+  return detail ? streamingProviders(detail.providersByRegion[region]).map((provider) => provider.id) : null;
 }
 
 function runtimeOf(detail: MediaDetail | null): number | null {
@@ -108,7 +104,7 @@ export interface SessionCandidate {
   card: DiscoveryCard;
 }
 
-function toDiscoveryCard(card: MediaCard, detail: MediaDetail | null, genreNames: ReadonlyMap<number, string>, reason: string | null, exploration: boolean): DiscoveryCard {
+function toDiscoveryCard(card: MediaCard, detail: MediaDetail | null, genreNames: ReadonlyMap<number, string>, reason: string | null, exploration: boolean, region: string): DiscoveryCard {
   const genreIds = detail ? detail.genres.map((genre) => genre.id) : card.genreIds;
   return {
     kind: card.kind,
@@ -130,6 +126,7 @@ function toDiscoveryCard(card: MediaCard, detail: MediaDetail | null, genreNames
     collectionId: detail?.kind === "movie" ? (detail.collection?.id ?? null) : null,
     collectionName: detail?.kind === "movie" ? (detail.collection?.name ?? null) : null,
     ambient: null,
+    streaming: streamingProviders(detail?.providersByRegion[region]),
   };
 }
 
@@ -168,7 +165,7 @@ async function buildFranchises(accepted: readonly PooledCandidate[], startedColl
             if (!fits) return null;
             const number = released.findIndex((entry) => entry.tmdbId === part.tmdbId) + 1;
             const reason = `Teil ${number} von ${released.length}: ${collection.name}.`;
-            return { score: lead.score, card: toDiscoveryCard(part, detail, genreNames, reason, false) };
+            return { score: lead.score, card: toDiscoveryCard(part, detail, genreNames, reason, false, region) };
           }),
       );
       const available = parts.filter((part): part is SessionCandidate => part !== null);
@@ -241,7 +238,7 @@ export async function buildSessionItems(userId: string, mode: DiscoveryModeName,
     const selected = selectSessionItems(accepted, mode, SESSION_SIZE);
     items = selected.map((item) => ({
       score: item.score,
-      card: toDiscoveryCard(item.card, (item as PooledCandidate).detail ?? null, genreNames, primaryReason(item.reasons) ?? null, isExploration(item)),
+      card: toDiscoveryCard(item.card, (item as PooledCandidate).detail ?? null, genreNames, primaryReason(item.reasons) ?? null, isExploration(item), region),
     }));
   }
 

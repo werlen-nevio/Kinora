@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { DetailHero } from "@/components/detail/hero";
 import { RelatedSeriesRows } from "@/components/detail/related-rows";
-import { CastRow, CrewSection, ExpandableText, FactList, MediaGallery, ProvidersSection, SectionHeading } from "@/components/detail/sections";
+import { CastRow, CrewSection, ExpandableText, FactList, MediaGallery, ProvidersSection, ProvidersSummary, SectionHeading } from "@/components/detail/sections";
 import { TrackView } from "@/components/detail/track-view";
 import { MediaDiaryPanel } from "@/components/diary/media-diary-panel";
 import { FavoriteButton, MoreMenu, PersonalStatus, RatingControl, SeenButton, ShareButton, TrailerButton, WatchlistButton } from "@/components/media/actions";
@@ -95,6 +95,7 @@ export default async function SeriesPage({ params }: PageProps) {
             <ShareButton title={series.title} />
             <MoreMenu media={ref} title={series.title} />
           </div>
+          <ProvidersSummary providers={series.providersByRegion[region]} region={region} />
           {series.overview ? <p className="line-clamp-3 max-w-[68ch] pt-1 text-[15px] leading-relaxed text-screen/85 text-pretty">{series.overview}</p> : null}
         </DetailHero>
 

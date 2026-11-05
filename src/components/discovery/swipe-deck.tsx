@@ -12,6 +12,7 @@ import { DIARY_KEY } from "@/components/diary/use-diary";
 import { FrameStrip } from "@/components/home/cards";
 import { ApiFailure, apiFetch, optimisticItem, useLibraryState, useSetLibraryItem } from "@/components/library/library-provider";
 import { AmbientSync } from "@/components/media/ambient";
+import { ProviderLogos } from "@/components/media/provider-logos";
 import { ImageFallback, TmdbImage } from "@/components/media/tmdb-image";
 import { Button, buttonStyles } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/primitives";
@@ -102,6 +103,7 @@ function CardBody({ card }: { card: DiscoveryCard }) {
         {rating ? <span>TMDB {rating}</span> : null}
       </p>
       {card.genres.length ? <p className="mt-1 truncate text-sm text-fog">{card.genres.join(", ")}</p> : null}
+      <ProviderLogos providers={card.streaming ?? []} className="mt-2" />
       {card.overview ? <p className="mt-2.5 hidden text-sm leading-relaxed text-screen/80 line-clamp-3 @[15rem]:[display:-webkit-box]">{card.overview}</p> : null}
       {card.reason ? <p className="mt-2.5 text-sm font-medium leading-snug text-ambient line-clamp-2">{card.reason}</p> : null}
     </div>

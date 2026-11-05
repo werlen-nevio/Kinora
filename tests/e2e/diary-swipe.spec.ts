@@ -279,6 +279,9 @@ test.describe("Swipe", () => {
     await rateViaApi(page, 671, 9);
     await startDeck(page);
 
+    // Nur die oberste Karte zählt, die übrigen sind für Hilfstechnik ausgeblendet.
+    await expect(page.getByRole("img", { name: "Netflix" })).toHaveCount(1);
+
     const liked = await topTitle(page);
     await dragCard(page, 340, 0);
     await expect.poll(() => topTitle(page)).not.toBe(liked);

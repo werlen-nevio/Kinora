@@ -46,6 +46,9 @@ test("2. Harry Potter suchen und die Detailseite öffnen", async ({ page }) => {
   await expect(page.getByText("CH 6")).toBeVisible();
   await expect(page.getByRole("region", { name: "Handlung" })).toContainText("Hogwarts");
   await expect(page.getByRole("region", { name: "Verfügbarkeit" })).toContainText("Netflix");
+  await expect(page.getByRole("region", { name: "Verfügbarkeit" })).toContainText("Angaben für die Schweiz");
+  // Die Anbieter stehen auch im Kopf der Seite, der Link springt zur vollständigen Liste.
+  await expect(page.getByRole("link", { name: "Alle Angebote", exact: true })).toHaveAttribute("href", "#verfuegbarkeit");
   await expect(page.getByRole("region", { name: "Technische Informationen" })).toContainText("Budget");
   expect(problems).toEqual([]);
 });
@@ -132,10 +135,12 @@ test("6. Watchlist und «Gesehen»", async ({ page }) => {
   await page.goto("/watchlist");
   await expect(page.getByText("2 Titel", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Inception", exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Netflix" })).toHaveCount(2);
 
   // Sortieren und Filtern laufen ohne Neuladen.
   await page.getByRole("radiogroup", { name: "Darstellung" }).getByRole("radio", { name: "Liste" }).click();
   await expect(page.getByRole("link", { name: /Inception/ })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Netflix" })).toHaveCount(2);
   await page.getByRole("radiogroup", { name: "Darstellung" }).getByRole("radio", { name: "Raster" }).click();
 
   await page.goto("/film/672");

@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { regionName } from "@/lib/locale";
+import { streamingProviders, uniqueProviders } from "@/lib/tmdb-types";
 import { discoverParams } from "@/server/tmdb/api";
 import { normalizeCard, normalizeCollection, normalizeMovie, normalizePerson, normalizeTv } from "@/server/tmdb/normalize";
 
@@ -8,6 +10,38 @@ const translations = {
     { iso_639_1: "en", iso_3166_1: "US", data: { title: "Spirited Away", overview: "A girl enters the spirit world.", tagline: "Go." } },
   ],
 };
+
+describe("Anbieterlisten", () => {
+  const provider = (id: number, priority: number) => ({ id, name: `Anbieter ${id}`, logoPath: null, priority });
+  const regional = {
+    region: "CH",
+    link: null,
+    flatrate: [provider(8, 5)],
+    free: [provider(3, 1)],
+    ads: [provider(3, 1), provider(4, 9)],
+    rent: [provider(2, 0)],
+    buy: [provider(2, 0)],
+  };
+
+  it("zählt nur Abo, Kostenlos und Werbung als Streaming, jeden Anbieter einmal und nach Priorität", () => {
+    expect(streamingProviders(regional).map((entry) => entry.id)).toEqual([3, 8, 4]);
+  });
+
+  it("liefert ohne Angaben für die Region eine leere Liste", () => {
+    expect(streamingProviders(undefined)).toEqual([]);
+  });
+
+  it("führt einen Anbieter zum Leihen und Kaufen nur einmal", () => {
+    expect(uniqueProviders(regional.rent, regional.buy).map((entry) => entry.id)).toEqual([2]);
+  });
+
+  it("nennt die Region passend für «für»", () => {
+    expect(regionName("CH")).toBe("die Schweiz");
+    expect(regionName("US")).toBe("die USA");
+    expect(regionName("DE")).toBe("Deutschland");
+    expect(regionName("JP")).toBe("JP");
+  });
+});
 
 describe("normalizeCard", () => {
   it("vereinheitlicht Filme und Serien", () => {

@@ -8,8 +8,9 @@ import { Carousel } from "@/components/media/carousel";
 import { RowHeading } from "@/components/media/media-row";
 import { TmdbImage } from "@/components/media/tmdb-image";
 import { Dialog, DialogTrigger } from "@/components/ui/primitives";
+import { regionName } from "@/lib/locale";
 import { tmdbOriginalUrl } from "@/lib/tmdb-image";
-import type { CastMember, CrewMember, ImageAsset, Video, WatchProvider, WatchProviders } from "@/lib/tmdb-types";
+import { type CastMember, type CrewMember, type ImageAsset, uniqueProviders, type Video, type WatchProvider, type WatchProviders } from "@/lib/tmdb-types";
 import { cn } from "@/lib/utils";
 
 export function SectionHeading({ children }: { children: React.ReactNode }) {
@@ -159,13 +160,14 @@ export function MediaGallery({ title, videos, backdrops, posters }: { title: str
   );
 }
 
-function ProviderGroup({ title, providers }: { title: string; providers: readonly WatchProvider[] }) {
+function ProviderGroup({ title, providers, limit = providers.length }: { title: string; providers: readonly WatchProvider[]; limit?: number }) {
   if (providers.length === 0) return null;
+  const hidden = providers.length - limit;
   return (
     <div>
       <p className="mb-2 text-sm text-fog">{title}</p>
       <ul className="flex flex-wrap gap-2">
-        {providers.map((provider) => (
+        {providers.slice(0, limit).map((provider) => (
           <li key={provider.id} className="flex items-center gap-2 rounded-xl bg-white/6 py-1.5 pl-1.5 pr-3">
             <span className="relative size-8 overflow-hidden rounded-lg bg-ink-overlay">
               {provider.logoPath ? <TmdbImage path={provider.logoPath} kind="logo" alt="" sizes="40px" /> : null}
@@ -173,26 +175,51 @@ function ProviderGroup({ title, providers }: { title: string; providers: readonl
             <span className="text-[13px]">{provider.name}</span>
           </li>
         ))}
+        {hidden > 0 ? <li className="flex items-center px-1 text-[13px] text-fog">+{hidden}</li> : null}
       </ul>
     </div>
   );
 }
 
-const REGION_NAMES: Record<string, string> = { CH: "der Schweiz", DE: "Deutschland", AT: "Österreich", FR: "Frankreich", IT: "Italien", US: "den USA", GB: "Grossbritannien" };
+function hasProviders(providers: WatchProviders | undefined): providers is WatchProviders {
+  return Boolean(providers) && [providers?.flatrate, providers?.free, providers?.ads, providers?.rent, providers?.buy].some((list) => list?.length);
+}
+
+const SUMMARY_LIMIT = 4;
+
+/** Kurzfassung für den Kopf der Detailseite: Leihen und Kaufen nur, wenn es sonst nichts gibt. */
+export function ProvidersSummary({ providers, region }: { providers: WatchProviders | undefined; region: string }) {
+  if (!hasProviders(providers)) return <p className="text-sm text-fog">Für {regionName(region)} sind bei TMDB keine Anbieter eingetragen.</p>;
+  const free = uniqueProviders(providers.free, providers.ads);
+  return (
+    <div className="flex flex-wrap items-end gap-x-6 gap-y-3 pt-1">
+      {providers.flatrate.length || free.length ? (
+        <>
+          <ProviderGroup title="Im Abo" providers={providers.flatrate} limit={SUMMARY_LIMIT} />
+          <ProviderGroup title="Kostenlos" providers={free} limit={SUMMARY_LIMIT} />
+        </>
+      ) : (
+        <ProviderGroup title="Leihen oder kaufen" providers={uniqueProviders(providers.rent, providers.buy)} limit={SUMMARY_LIMIT} />
+      )}
+      <a href="#verfuegbarkeit" className="pb-3 text-sm text-fog underline underline-offset-2 hover:text-screen">
+        Alle Angebote
+      </a>
+    </div>
+  );
+}
 
 export function ProvidersSection({ providers, region, kindLabel }: { providers: WatchProviders | undefined; region: string; kindLabel: string }) {
-  const hasAny = providers && [providers.flatrate, providers.free, providers.ads, providers.rent, providers.buy].some((list) => list.length > 0);
   return (
-    <section className="space-y-4" aria-label="Verfügbarkeit">
+    <section id="verfuegbarkeit" className="space-y-4" aria-label="Verfügbarkeit">
       <SectionHeading>Wo kann ich {kindLabel} sehen?</SectionHeading>
-      {hasAny ? (
+      {hasProviders(providers) ? (
         <div className="space-y-4">
           <ProviderGroup title="Im Abo" providers={providers.flatrate} />
-          <ProviderGroup title="Kostenlos" providers={[...providers.free, ...providers.ads]} />
+          <ProviderGroup title="Kostenlos" providers={uniqueProviders(providers.free, providers.ads)} />
           <ProviderGroup title="Leihen" providers={providers.rent} />
           <ProviderGroup title="Kaufen" providers={providers.buy} />
           <p className="text-xs text-fog-dim">
-            Angaben für {REGION_NAMES[region] ?? region}, ohne Gewähr, Daten von JustWatch über TMDB.
+            Angaben für {regionName(region)}, ohne Gewähr, Daten von JustWatch über TMDB.
             {providers.link ? (
               <>
                 {" "}
@@ -204,7 +231,7 @@ export function ProvidersSection({ providers, region, kindLabel }: { providers: 
           </p>
         </div>
       ) : (
-        <p className="text-sm text-fog">Für {REGION_NAMES[region] ?? region} sind bei TMDB keine Anbieter eingetragen.</p>
+        <p className="text-sm text-fog">Für {regionName(region)} sind bei TMDB keine Anbieter eingetragen.</p>
       )}
     </section>
   );

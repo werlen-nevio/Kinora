@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { diaryPayload } from "./diary";
-import type { MediaKind } from "./tmdb-types";
+import type { MediaKind, WatchProvider } from "./tmdb-types";
 
 export const DISCOVERY_MODES = ["FOR_YOU", "SURPRISE", "TOP_RATED", "HIDDEN_GEMS", "FRANCHISES"] as const;
 export type DiscoveryModeName = (typeof DISCOVERY_MODES)[number];
@@ -77,6 +77,8 @@ export interface DiscoveryCard {
   /** Platz bei Sessionstart: Die Anpassung rechnet immer von hier aus, damit sich nichts aufschaukelt. */
   rank: number;
   ambient: { accent: string; glow: string } | null;
+  /** Abo- und Gratisanbieter der Region. Fehlt in Sessions, die vor dieser Angabe gestartet wurden. */
+  streaming?: WatchProvider[];
 }
 
 export interface DiscoveryQueueItem {

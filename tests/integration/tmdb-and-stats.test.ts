@@ -331,10 +331,12 @@ describe("Watchlist-Zusatzdaten", () => {
   it("liefert Anbieter der Region je Titel", async () => {
     const user = await signUp();
     await act(user, { kind: "movie", tmdbId: 671, action: "watchlist", on: true });
-    const { data } = await call<{ region: string; providers: { name: string }[]; byItem: Record<string, number[]> }>(providersGet, { user });
+    const { data } = await call<{ region: string; providers: { name: string }[]; byItem: Record<string, number[]>; streaming: Record<string, number[]> }>(providersGet, { user });
     expect(data.region).toBe("CH");
     expect(data.providers.map((provider) => provider.name)).toContain("Netflix");
-    expect(data.byItem["movie:671"]).toContain(8);
+    expect(data.byItem["movie:671"]).toEqual(expect.arrayContaining([8, 2]));
+    // Apple TV gibt es im Testserver nur zum Leihen und Kaufen.
+    expect(data.streaming["movie:671"]).toEqual([8]);
   });
 
   it("liefert die empfohlene Reihenfolge", async () => {
