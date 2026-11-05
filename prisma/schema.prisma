@@ -1,0 +1,569 @@
+// Kinora: relationales Datenmodell.
+//
+// Grundsätze:
+// - Alles Persönliche hängt per Foreign Key mit onDelete: Cascade am User.
+// - Medien werden immer über (type, tmdbId) identifiziert, weil TMDB-IDs nur
+//   innerhalb eines Medientyps eindeutig sind.
+// - `Media` hält nur einen schmalen Snapshot, den Bibliothek, Filter und
+//   Statistik ohne TMDB-Aufruf brauchen. Vollständige Metadaten bleiben bei TMDB.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MediaType {
+  MOVIE
+  TV
+}
+
+enum SeriesStatus {
+  STARTED
+  WATCHING
+  PAUSED
+  COMPLETED
+}
+
+enum CreditRole {
+  ACTOR
+  DIRECTOR
+  WRITER
+  CREATOR
+}
+
+enum InteractionType {
+  DETAIL_VIEW
+  WATCHLIST_ADD
+  WATCHLIST_REMOVE
+  WATCHED
+  UNWATCHED
+  RATED
+  RATING_REMOVED
+  FAVORITED
+  UNFAVORITED
+  NOT_INTERESTED
+  INTEREST_RESTORED
+  EPISODE_WATCHED
+  EPISODE_UNWATCHED
+  RECOMMENDATION_CLICK
+  ONBOARDING_COMPLETED
+}
+
+enum SwipeAction {
+  INTERESTED
+  NOT_INTERESTED
+  WATCHED
+}
+
+enum DiscoveryMode {
+  FOR_YOU
+  SURPRISE
+  TOP_RATED
+  HIDDEN_GEMS
+  FRANCHISES
+}
+
+enum DiscoverySessionState {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+}
+
+enum DiscoveryItemStatus {
+  PENDING
+  INTERESTED
+  NOT_INTERESTED
+  WATCHED
+  SKIPPED
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
+
+// ---------------------------------------------------------------------------
+// Authentifizierung (Better Auth)
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String   @id
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions        Session[]
+  accounts        Account[]
+  avatar          UserAvatar?
+  preferences     UserPreference?
+  genrePrefs      UserGenrePreference[]
+  media           UserMedia[]
+  ratings         Rating[]
+  diaryEntries    WatchDiaryEntry[]
+  episodeProgress EpisodeProgress[]
+  watchlist       WatchlistEntry[]
+  favorites       Favorite[]
+  swipes          MediaSwipeInteraction[]
+  discoverySessions DiscoverySession[]
+  recommendations RecommendationCache[]
+  recState        RecommendationState?
+  interactions    UserInteraction[]
+  searchHistory   SearchHistory[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verifications")
+}
+
+model RateLimit {
+  id          String @id
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+
+  @@map("rate_limits")
+}
+
+// ---------------------------------------------------------------------------
+// Profil
+// ---------------------------------------------------------------------------
+
+model UserAvatar {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data      Bytes
+  mimeType  String
+  updatedAt DateTime @updatedAt
+
+  @@map("user_avatars")
+}
+
+model UserPreference {
+  userId                String    @id
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  language              String    @default("de-DE")
+  region                String    @default("CH")
+  showRecommendationWhy Boolean   @default(true)
+  recommendationWeights Json?
+  onboardingCompletedAt DateTime?
+  discoveryMode         DiscoveryMode @default(FOR_YOU)
+  discoveryFilters      Json?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("user_preferences")
+}
+
+model UserGenrePreference {
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  genreId Int
+  // +1 ausdrücklich gewünscht, -1 ausdrücklich unerwünscht.
+  weight  Int
+
+  @@id([userId, genreId])
+  @@map("user_genre_preferences")
+}
+
+// ---------------------------------------------------------------------------
+// Medien (nicht personenbezogen)
+// ---------------------------------------------------------------------------
+
+model Media {
+  id               String    @id @default(cuid())
+  type             MediaType
+  tmdbId           Int
+  title            String
+  originalTitle    String?
+  posterPath       String?
+  backdropPath     String?
+  releaseDate      DateTime? @db.Date
+  // Filme: Laufzeit. Serien: durchschnittliche Episodenlaufzeit.
+  runtime          Int?
+  voteAverage      Float?
+  voteCount        Int?
+  popularity       Float?
+  originalLanguage String?
+  genreIds         Int[]
+  keywordIds       Int[]
+  collectionId     Int?
+  collectionName   String?
+  // Nur Serien
+  tmdbStatus       String?
+  seasonCount      Int?
+  airedEpisodes    Int?
+  totalEpisodes    Int?
+  fetchedAt        DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+
+  credits         MediaPerson[]
+  userMedia       UserMedia[]
+  ratings         Rating[]
+  diaryEntries    WatchDiaryEntry[]
+  episodeProgress EpisodeProgress[]
+  watchlist       WatchlistEntry[]
+  favorites       Favorite[]
+  interactions    UserInteraction[]
+  swipes          MediaSwipeInteraction[]
+  discoveryItems  DiscoverySessionItem[]
+
+  @@unique([type, tmdbId])
+  @@index([collectionId])
+  @@index([fetchedAt])
+  @@map("media")
+}
+
+model Person {
+  id          String        @id @default(cuid())
+  tmdbId      Int           @unique
+  name        String
+  profilePath String?
+  credits     MediaPerson[]
+
+  @@map("people")
+}
+
+model MediaPerson {
+  mediaId  String
+  media    Media      @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  personId String
+  person   Person     @relation(fields: [personId], references: [id], onDelete: Cascade)
+  role     CreditRole
+  position Int        @default(0)
+
+  @@id([mediaId, personId, role])
+  @@index([personId, role])
+  @@map("media_people")
+}
+
+// ---------------------------------------------------------------------------
+// Persönliche Bibliothek
+// ---------------------------------------------------------------------------
+
+// Zusammenfassung pro Nutzer und Titel. Quelle der Wahrheit für Sehvorgänge und
+// Episoden sind WatchDiaryEntry bzw. EpisodeProgress; die Felder hier werden in
+// derselben Transaktion nachgeführt.
+model UserMedia {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaId         String
+  media           Media         @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  watched         Boolean       @default(false)
+  watchCount      Int           @default(0)
+  lastWatchedAt   DateTime?
+  notInterested   Boolean       @default(false)
+  seriesStatus    SeriesStatus?
+  episodesWatched Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([userId, mediaId])
+  @@index([userId, watched])
+  @@index([userId, seriesStatus])
+  @@map("user_media")
+}
+
+model Rating {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaId   String
+  media     Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  // Die aktuelle Gesamtbewertung, 1 bis 10 in halben Punkten. Die Bewertung eines einzelnen
+  // Sehvorgangs steht im Tagebucheintrag. Wertebereich per CHECK-Constraint abgesichert.
+  value     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, mediaId])
+  @@index([userId, value])
+  @@map("ratings")
+}
+
+// Ein Sehvorgang im Filmtagebuch, pro Titel beliebig viele. `watchedAt` bleibt NULL, wenn
+// der Zeitpunkt unbekannt ist: Solche Einträge zählen als gesehen, erscheinen aber in keiner
+// zeitbezogenen Statistik. Zeitpunkte sind Ortszeit des Eintrags und werden als UTC abgelegt,
+// damit aus «24.12., 20:15» nie durch eine Zeitzone ein anderer Tag wird.
+model WatchDiaryEntry {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaId      String
+  media        Media     @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  watchedAt    DateTime?
+  // Ohne Uhrzeit zählt nur das Datum von `watchedAt`.
+  hasWatchTime Boolean   @default(false)
+  // Bewertung dieses Sehvorgangs, 1 bis 10 in halben Punkten. Unabhängig von Rating.
+  rating       Float?
+  review       String?
+  isRewatch    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId, watchedAt])
+  @@index([userId, mediaId])
+  @@index([userId, createdAt])
+  @@map("watch_diary_entries")
+}
+
+model EpisodeProgress {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaId       String
+  media         Media     @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  seasonNumber  Int
+  episodeNumber Int
+  runtime       Int?
+  watchedAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@unique([userId, mediaId, seasonNumber, episodeNumber])
+  @@index([userId, watchedAt])
+  @@map("episode_progress")
+}
+
+model WatchlistEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaId   String
+  media     Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, mediaId])
+  @@index([userId, createdAt])
+  @@map("watchlist_entries")
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaId   String
+  media     Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, mediaId])
+  @@index([userId, createdAt])
+  @@map("favorites")
+}
+
+model UserInteraction {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      InteractionType
+  mediaId   String?
+  media     Media?          @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  metadata  Json?
+  createdAt DateTime        @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, type])
+  @@map("user_interactions")
+}
+
+model SearchHistory {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query      String
+  normalized String
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, normalized])
+  @@index([userId, updatedAt])
+  @@map("search_history")
+}
+
+// ---------------------------------------------------------------------------
+// Discovery
+// ---------------------------------------------------------------------------
+
+// Eine Swipe-Entscheidung. Für Empfehlungen zählt pro Titel nur die jeweils letzte,
+// sodass wiederholtes Swipen einen Titel nicht aufschaukeln kann.
+model MediaSwipeInteraction {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaId   String
+  media     Media       @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  action    SwipeAction
+  createdAt DateTime    @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, mediaId, createdAt])
+  @@index([userId, action])
+  @@map("media_swipe_interactions")
+}
+
+model DiscoverySession {
+  id              String                @id @default(cuid())
+  userId          String
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mode            DiscoveryMode
+  filters         Json                  @default("{}")
+  currentPosition Int                   @default(0)
+  state           DiscoverySessionState @default(ACTIVE)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  items DiscoverySessionItem[]
+
+  @@index([userId, state, updatedAt])
+  @@map("discovery_sessions")
+}
+
+model DiscoverySessionItem {
+  sessionId           String
+  session             DiscoverySession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  mediaId             String
+  media               Media               @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  position            Int
+  recommendationScore Float
+  status              DiscoveryItemStatus @default(PENDING)
+  // Alles, was die Karte zeigt: So kostet das Blättern keine TMDB-Anfrage.
+  card                Json
+  // Was der Swipe verändert hat; daraus entsteht das Rückgängigmachen.
+  effect              Json?
+  actedAt             DateTime?
+
+  @@id([sessionId, mediaId])
+  @@unique([sessionId, position])
+  @@index([sessionId, status, position])
+  @@map("discovery_session_items")
+}
+
+// ---------------------------------------------------------------------------
+// Empfehlungen
+// ---------------------------------------------------------------------------
+
+model RecommendationCache {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // z. B. "for_you", "because:MOVIE:671", "hidden_gems"
+  section    String
+  mediaType  MediaType
+  tmdbId     Int
+  rank       Int
+  score      Float
+  // Beitrag jedes Signals zum Score; macht die Rangfolge nachvollziehbar.
+  breakdown  Json
+  // Strukturierte Begründungen aus tatsächlichen Nutzersignalen.
+  reasons    Json
+  // Schmaler Karten-Snapshot, damit Reihen ohne TMDB-Aufruf gerendert werden.
+  card       Json
+  computedAt DateTime  @default(now())
+  expiresAt  DateTime
+
+  @@unique([userId, section, mediaType, tmdbId])
+  @@index([userId, section, rank])
+  @@index([expiresAt])
+  @@map("recommendation_cache")
+}
+
+model RecommendationState {
+  userId      String    @id
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Letzte Änderung an einem Nutzersignal.
+  dirtyAt     DateTime?
+  computedAt  DateTime?
+  signalCount Int       @default(0)
+  // Titel und Metadaten der "Weil du X mochtest"-Reihen.
+  sections    Json?
+  updatedAt   DateTime  @updatedAt
+
+  @@map("recommendation_state")
+}
+
+// ---------------------------------------------------------------------------
+// Infrastruktur
+// ---------------------------------------------------------------------------
+
+model TmdbCache {
+  key       String   @id
+  payload   Json
+  fetchedAt DateTime @default(now())
+  expiresAt DateTime
+  // Bis hier darf ein abgelaufener Eintrag noch ausgeliefert werden.
+  staleAt   DateTime
+
+  @@index([staleAt])
+  @@map("tmdb_cache")
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  type        String
+  payload     Json      @default("{}")
+  // Eindeutig unter offenen Jobs, siehe partiellen Index in der Migration.
+  dedupeKey   String?
+  status      JobStatus @default(PENDING)
+  runAt       DateTime  @default(now())
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5)
+  lockedAt    DateTime?
+  lastError   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, runAt])
+  @@map("jobs")
+}

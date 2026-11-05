@@ -1,0 +1,27 @@
+node_modules/
+.next/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Generierter Prisma-Client
+src/generated/
+
+# Secrets
+*.pem
+docker/certs/
+.env
+.env.*
+!.env.example
+
+# Tests
+.tmp/
+test-results/
+playwright-report/
+tests/e2e/.artifacts/
+
+*.log
+.DS_Store
+Thumbs.db

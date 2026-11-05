@@ -1,0 +1,223 @@
+@import "tailwindcss";
+@import "@fontsource-variable/mona-sans/wdth.css";
+@import "@fontsource-variable/bodoni-moda/opsz.css";
+@import "@fontsource-variable/bodoni-moda/opsz-italic.css";
+
+/*
+  Kinora: Designsystem.
+  Die Oberfläche ist ein dunkler Kinosaal. Eine feste Markenakzentfarbe gibt es nicht:
+  --ambient und --ambient-glow kommen aus dem Backdrop des jeweiligen Films, und
+  Fortschritt, Bewertung und Licht nehmen seine Farbe an. Ohne Film leuchtet der
+  Glühfaden des Projektors (--color-tungsten).
+*/
+
+@property --ambient {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #f2be7e;
+}
+
+@property --ambient-glow {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #5c4128;
+}
+
+@theme {
+  --color-ink: #0e0c12;
+  --color-ink-raised: #17141c;
+  --color-ink-overlay: #221e29;
+  --color-ink-line: #2d2835;
+  --color-screen: #f3efe8;
+  --color-fog: #aaa4b3;
+  --color-fog-dim: #857f8f;
+  --color-tungsten: #f2be7e;
+  --color-seen: #8ad1b2;
+  --color-fav: #ee93a6;
+  --color-danger: #f08a7b;
+  --color-ambient: var(--ambient);
+  --color-ambient-glow: var(--ambient-glow);
+
+  --font-sans: "Mona Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bodoni Moda Variable", "Times New Roman", serif;
+
+  --text-title-xl: clamp(2.75rem, 1.6rem + 5vw, 6rem);
+  --text-title-lg: clamp(2.25rem, 1.5rem + 3vw, 4rem);
+  --text-title-md: clamp(1.625rem, 1.3rem + 1.1vw, 2.25rem);
+  --text-title-sm: clamp(1.25rem, 1.15rem + 0.4vw, 1.5rem);
+
+  --ease-film: cubic-bezier(0.22, 0.8, 0.26, 1);
+
+  --breakpoint-3xl: 112rem;
+  --breakpoint-4xl: 140rem;
+}
+
+:root {
+  color-scheme: dark;
+  --gutter: clamp(1rem, 0.4rem + 2.6vw, 4rem);
+  transition: --ambient 900ms var(--ease-film), --ambient-glow 900ms var(--ease-film);
+}
+
+html {
+  background: var(--color-ink);
+  scroll-padding-top: 5rem;
+}
+
+body {
+  background: var(--color-ink);
+  color: var(--color-screen);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100dvh;
+  overflow-x: clip;
+}
+
+/* Bodoni bei niedriger optischer Grösse: kräftigere Haarlinien, auch über Bildern lesbar. */
+.font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: none;
+  font-variation-settings: "opsz" 18;
+  letter-spacing: -0.01em;
+}
+
+.gutter {
+  padding-inline: var(--gutter);
+}
+
+/* Im Layer, damit Utilities wie outline-none sie gezielt ersetzen können. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-screen);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+::selection {
+  background: var(--ambient);
+  color: var(--color-ink);
+}
+
+/* Horizontale Reihen: nativer Scroll mit Snap, damit Touch und Trackpad natürlich bleiben. */
+.reel {
+  display: flex;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: var(--gutter);
+  padding-inline: var(--gutter);
+  scrollbar-width: none;
+}
+
+.reel::-webkit-scrollbar {
+  display: none;
+}
+
+.reel > * {
+  scroll-snap-align: start;
+  flex: none;
+}
+
+/* Das Licht des Films, das hinter dem Bild in den Saal fällt. */
+.ambient-light {
+  background:
+    radial-gradient(60% 70% at 18% 0%, color-mix(in oklab, var(--ambient-glow) 70%, transparent), transparent 70%),
+    radial-gradient(50% 50% at 85% 10%, color-mix(in oklab, var(--ambient-glow) 35%, transparent), transparent 70%);
+}
+
+/* Dieselbe Lichtquelle für grosse Flächen: oben ausgeblendet, damit keine Kante entsteht. */
+.ambient-wash {
+  background: radial-gradient(70% 60% at 22% 42%, color-mix(in oklab, var(--ambient-glow) 62%, transparent), transparent 72%);
+  mask-image: linear-gradient(to bottom, transparent, black 35%, black 65%, transparent);
+}
+
+.scrim-hero {
+  background:
+    linear-gradient(to top, var(--color-ink) 2%, color-mix(in oklab, var(--color-ink) 72%, transparent) 26%, transparent 62%),
+    linear-gradient(to right, color-mix(in oklab, var(--color-ink) 88%, transparent) 0%, color-mix(in oklab, var(--color-ink) 45%, transparent) 38%, transparent 68%);
+}
+
+.glass {
+  background: color-mix(in oklab, var(--color-ink) 88%, transparent);
+  /* Das Präfix zuerst: Umgekehrt behält der CSS-Compiler nur das Präfix, und Chrome ignoriert es. */
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(100deg, var(--color-ink-raised) 30%, var(--color-ink-overlay) 50%, var(--color-ink-raised) 70%);
+  background-size: 240% 100%;
+  animation: shimmer 1.8s linear infinite;
+}
+
+@keyframes hero-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.page-enter {
+  animation: page-in 320ms var(--ease-film);
+}
+
+/* Filmstreifen: pro Teil ein Bildfeld, das aufleuchtet, sobald der Teil gesehen ist. */
+.frame-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 3px;
+}
+
+.frame-strip > span {
+  height: 6px;
+  border-radius: 1.5px;
+  background: color-mix(in oklab, var(--color-screen) 14%, transparent);
+  transition: background-color 400ms var(--ease-film), box-shadow 400ms var(--ease-film);
+}
+
+.frame-strip > span[data-on="true"] {
+  background: var(--ambient);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--ambient) 55%, transparent);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.text-pretty {
+  text-wrap: pretty;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
